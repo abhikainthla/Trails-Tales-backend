@@ -1,0 +1,38 @@
+{
+  "name": "trails-tales-backend",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+  "dev": "nodemon server.js",
+  "start": "node server.js"
+},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/abhikainthla/Trails-Tales-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/abhikainthla/Trails-Tales-backend/issues"
+  },
+  "homepage": "https://github.com/abhikainthla/Trails-Tales-backend#readme",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.5.0",
+    "multer": "^2.1.1",
+    "redis": "^5.12.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
