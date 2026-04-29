@@ -40,9 +40,14 @@ export const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+    if (!process.env.JWT_SECRET) {
+  throw new Error("JWT_SECRET is missing in environment variables");
+}
+
 
     res.json({ token, user });
   } catch (err) {
+    console.error("LOGIN ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 };
