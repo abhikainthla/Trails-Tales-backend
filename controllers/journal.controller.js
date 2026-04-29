@@ -1,19 +1,56 @@
 import Journal from "../models/Journal.js";
 import { uploadImage } from "../utils/cloudinaryUpload.js";
+import fs from "fs";
 
 //  CREATE
 export const createJournal = async (req, res) => {
   try {
+    const { title, story, location, date, tags, visibility, images } = req.body;
+
+    if (!title || !story) {
+      return res.status(400).json({ message: "Title and story are required" });
+    }
+
+    const imageUrls = [];
+
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        try {
+          const url = await uploadImage(file.path);
+          imageUrls.push(url);
+
+          fs.unlinkSync(file.path); // cleanup
+        } catch (err) {
+          console.error("Image upload failed:", err.message);
+        }
+      }
+    }
+
     const journal = await Journal.create({
-      ...req.body,
       user: req.user.id,
+      title,
+      story,
+      location: {
+        name: location || "",
+      },
+      date: date ? new Date(date) : null,
+      tags: Array.isArray(tags)
+        ? tags
+        : tags
+        ? tags.split(",").map((t) => t.trim())
+        : [],
+      visibility: visibility || "public",
+      images: imageUrls.length ? imageUrls : [],
     });
 
     res.status(201).json(journal);
   } catch (err) {
+    console.error("CREATE JOURNAL ERROR:", err); // 🔥 LOG THIS
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 //  GET ALL (with filters)
 export const getJournals = async (req, res) => {
@@ -34,6 +71,8 @@ export const getJournals = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 //  GET ONE
 export const getJournalById = async (req, res) => {
@@ -100,6 +139,7 @@ export const getNearbyJournals = async (req, res) => {
 export const uploadMedia = async (req, res) => {
   try {
     const url = await uploadImage(req.file.path);
+    
     res.json({ url });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -156,13 +196,14 @@ export const searchJournals = async (req, res) => {
   const journals = await Journal.find({
     $or: [
       { title: { $regex: q, $options: "i" } },
-      { description: { $regex: q, $options: "i" } },
+      { story: { $regex: q, $options: "i" } }, // fixed
     ],
     ...(tag && { tags: tag }),
   });
 
   res.json(journals);
 };
+
 
 //  VIEWS
 export const incrementViews = async (req, res) => {

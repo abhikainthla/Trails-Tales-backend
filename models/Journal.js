@@ -9,7 +9,9 @@ const journalSchema = new mongoose.Schema(
     },
 
     title: { type: String, required: true },
-    description: String,
+
+    story: { type: String, required: true },
+
 
     location: {
       name: String,
@@ -20,11 +22,17 @@ const journalSchema = new mongoose.Schema(
       },
       coordinates: {
         type: [Number], // [lng, lat]
-        required: true,
+        default: undefined,
       },
     },
 
+
+    date: {
+      type: Date,
+    },
+
     images: [String],
+
     tags: [String],
 
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
@@ -41,14 +49,13 @@ const journalSchema = new mongoose.Schema(
 
     visibility: {
       type: String,
-      enum: ["public", "private"],
+      enum: ["public", "private", "followers"], // ✅ added
       default: "public",
     },
   },
   { timestamps: true }
 );
-
-//  GEO INDEX
 journalSchema.index({ location: "2dsphere" });
+
 
 export default mongoose.model("Journal", journalSchema);

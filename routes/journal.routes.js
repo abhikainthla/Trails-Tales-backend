@@ -11,6 +11,8 @@ import {
   searchJournals,
   incrementViews,
 } from "../controllers/journal.controller.js";
+import multer from "multer";
+const upload = multer({ dest: "uploads/" });
 
 import { protect } from "../middleware/auth.middleware.js";
 
@@ -21,7 +23,7 @@ router.get("/nearby", getNearbyJournals);
 router.get("/search", searchJournals);
 
 // CRUD
-router.post("/", protect, createJournal);
+router.post("/", protect, upload.array("images", 20), createJournal);
 router.get("/", getJournals);
 router.get("/:id", getJournalById);
 router.put("/:id", protect, updateJournal);
