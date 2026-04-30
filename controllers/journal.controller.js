@@ -5,7 +5,7 @@ import fs from "fs";
 //  CREATE
 export const createJournal = async (req, res) => {
   try {
-    const { title, story, location, date, tags, visibility, images } = req.body;
+    const { title, story, location, lat, lng, date, tags, visibility } = req.body;
 
     if (!title || !story) {
       return res.status(400).json({ message: "Title and story are required" });
@@ -32,6 +32,9 @@ export const createJournal = async (req, res) => {
       story,
       location: {
         name: location || "",
+        type: "Point",
+        coordinates:
+          lat && lng ? [parseFloat(lng), parseFloat(lat)] : undefined,
       },
       date: date ? new Date(date) : null,
       tags: Array.isArray(tags)
@@ -64,6 +67,7 @@ export const getJournals = async (req, res) => {
 
     const journals = await Journal.find(query)
       .populate("user", "name avatar")
+      .populate("comments.user", "name avatar")
       .sort({ createdAt: -1 });
 
     res.json(journals);
