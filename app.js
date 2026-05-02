@@ -4,7 +4,9 @@ import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import journalRoutes from "./routes/journal.routes.js";
 import userRoutes from "./routes/user.routes.js";
-
+import tripRoutes from "./routes/trip.routes.js"
+import Trip from "./models/Trip.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 
 
@@ -20,6 +22,8 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/journals", journalRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/trips", tripRoutes);
+app.use("/api/notifications", notificationRoutes);
 // health check
 app.get("/", (req, res) => {
   res.send("API is running...");

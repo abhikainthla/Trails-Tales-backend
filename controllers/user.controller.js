@@ -1,16 +1,52 @@
 import User from "../models/User.js";
+import Journal from "../models/Journal.js";
+import Trip from "../models/Trip.js";
+import { uploadImage } from "../utils/cloudinaryUpload.js";
+import fs from "fs";
 
 //  Get user by ID (public profile)
 export const getUserById = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id)
+    const userId = req.params.id;
+    if (!req.params.id || req.params.id === "undefined") {
+      return res.status(400).json({ message: "Invalid user id" });
+    }
+
+
+    const user = await User.findById(userId)
       .select("-password")
       .populate("followers", "name avatar")
       .populate("following", "name avatar");
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json(user);
+    //  fetch journals
+    const journals = await Journal.find({
+      user: userId,
+      visibility: "public",
+    }).sort({ createdAt: -1 });
+
+    //  fetch trips
+    const trips = await Trip.find({ user: userId })
+      .populate("journals")
+      .sort({ createdAt: -1 });
+
+    //  stats
+    const stats = {
+      trips: trips.length,
+      places: new Set(
+        journals.map((j) => j.location?.name).filter(Boolean)
+      ).size,
+      followers: user.followers.length,
+      following: user.following.length,
+    };
+
+    res.json({
+      user,
+      journals,
+      trips,
+      stats,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -27,15 +63,31 @@ export const getProfile = async (req, res) => {
 
 // Update profile
 export const updateProfile = async (req, res) => {
-  const updates = req.body;
+  try {
+    let avatarUrl = req.body.avatar;
 
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
-    updates,
-    { new: true }
-  ).select("-password");
+    // 🔥 handle avatar upload
+    if (req.file) {
+      avatarUrl = await uploadImage(req.file.path);
+      fs.unlinkSync(req.file.path);
+    }
 
-  res.json(user);
+    const updates = {
+      ...req.body,
+      avatar: avatarUrl,
+      isProfileComplete: true,
+    };
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      updates,
+      { new: true }
+    ).select("-password");
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 //  Follow / Unfollow
@@ -48,7 +100,9 @@ export const toggleFollow = async (req, res) => {
 
   if (!target) return res.status(404).json({ message: "User not found" });
 
-  const isFollowing = user.following.includes(targetId);
+const isFollowing = user.following.includes(targetId);
+
+
 
   if (isFollowing) {
     user.following.pull(targetId);
@@ -57,6 +111,10 @@ export const toggleFollow = async (req, res) => {
     user.following.push(targetId);
     target.followers.push(userId);
   }
+  target.notifications.push({
+  type: "follow",
+  message: `${user.name} followed you`,
+})
 
   await user.save();
   await target.save();
@@ -70,5 +128,10 @@ export const toggleFollow = async (req, res) => {
     });
   }
 
-  res.json({ message: isFollowing ? "Unfollowed" : "Followed" });
+res.json({
+  message: isFollowing ? "Unfollowed" : "Followed",
+  isFollowing,
+});
+
+
 };

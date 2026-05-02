@@ -1,6 +1,8 @@
 import Journal from "../models/Journal.js";
 import { uploadImage } from "../utils/cloudinaryUpload.js";
 import fs from "fs";
+import User from "../models/User.js";
+import Notification from "../models/Notification.js";
 
 //  CREATE
 export const createJournal = async (req, res) => {
@@ -155,6 +157,7 @@ export const toggleLike = async (req, res) => {
   const journal = await Journal.findById(req.params.id);
 
   const liked = journal.likes.includes(req.user.id);
+  const owner = await User.findById(journal.user);
 
   if (liked) {
     journal.likes.pull(req.user.id);
@@ -167,14 +170,20 @@ export const toggleLike = async (req, res) => {
       message: "Someone liked your journal",
     });
   }
-
+await Notification.create({
+  user: owner._id,
+  type: "like",
+  message: "Someone liked your journal",
+});
   await journal.save();
+  await owner.save();
   res.json(journal);
 };
 
 //  COMMENT
 export const addComment = async (req, res) => {
   const journal = await Journal.findById(req.params.id);
+  const owner = await User.findById(journal.user);
 
   const comment = {
     user: req.user.id,
@@ -189,6 +198,12 @@ export const addComment = async (req, res) => {
     type: "comment",
     message: "New comment on your journal",
   });
+  owner.notifications.push({
+  type: "comment",
+  message: "New comment on your journal",
+});
+
+await owner.save();
 
   res.json(journal);
 };
