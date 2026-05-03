@@ -4,17 +4,42 @@ import jwt from "jsonwebtoken";
 
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, username } = req.body;
 
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(400).json({ message: "User already exists" });
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    let finalUsername;
+
+    if (username) {
+      const clean = username
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[^a-z0-9_]/g, "");
+
+      if (clean.length < 3) {
+        return res.status(400).json({
+          message: "Username must be at least 3 characters",
+        });
+      }
+
+      const exists = await User.findOne({ username: clean });
+      if (exists) {
+        return res.status(400).json({ message: "Username taken" });
+      }
+
+      finalUsername = clean;
+    } else {
+      finalUsername = await generateUsername(name);
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name,
+      username: finalUsername,
       email,
       password: hashedPassword,
     });
@@ -24,6 +49,8 @@ export const register = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 export const login = async (req, res) => {
   try {
@@ -45,9 +72,51 @@ export const login = async (req, res) => {
 }
 
 
-    res.json({ token, user });
+    res.json({
+  token,
+  user: {
+    _id: user._id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    avatar: user.avatar,
+    interests: user.interests,
+  },
+});
+
   } catch (err) {
     console.error("LOGIN ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+const generateUsername = async (name) => {
+  let base = name.toLowerCase().replace(/\s+/g, "");
+  base = base.replace(/[^a-z0-9_]/g, "");
+
+  let username = base;
+  let counter = 1;
+
+  while (await User.findOne({ username })) {
+    username = `${base}${counter}`;
+    counter++;
+  }
+
+  return username;
+};
+
+export const updateInterests = async (req, res) => {
+  try {
+    const { interests } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { interests },
+      { new: true }
+    );
+
+    res.json(user);
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };

@@ -170,13 +170,21 @@ export const toggleLike = async (req, res) => {
       message: "Someone liked your journal",
     });
   }
-await Notification.create({
-  user: owner._id,
-  type: "like",
-  message: "Someone liked your journal",
-});
+if (!liked) {
+  await Notification.create({
+    user: owner._id,
+    type: "like",
+    message: `${req.user.name} liked your journal`,
+  });
+
+  const io = req.app.get("io");
+  io.to(owner._id.toString()).emit("notification", {
+    type: "like",
+    message: `${req.user.name} liked your journal`,
+  });
+}
+
   await journal.save();
-  await owner.save();
   res.json(journal);
 };
 
@@ -198,12 +206,13 @@ export const addComment = async (req, res) => {
     type: "comment",
     message: "New comment on your journal",
   });
-  owner.notifications.push({
+
+  await Notification.create({
+  user: owner._id,
   type: "comment",
-  message: "New comment on your journal",
+  message: `${req.user.name} commented on your journal`,
 });
 
-await owner.save();
 
   res.json(journal);
 };
