@@ -288,6 +288,7 @@ export const getTravelers = async (req, res) => {
           location: 1,
           interests: 1,
           followersCount: 1,
+          totalPosts: 1,
           previewImages: 1,
           isVerified: 1,
           tier: 1,
@@ -296,7 +297,7 @@ export const getTravelers = async (req, res) => {
             $in: ["$_id", followingIds],
           },
         },
-      },
+      }
     ]);
 
     res.json(users);
