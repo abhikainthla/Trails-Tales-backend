@@ -99,50 +99,73 @@ export const updateProfile = async (req, res) => {
 
 //  Follow / Unfollow
 export const toggleFollow = async (req, res) => {
-  const targetId = req.params.id;
-  const userId = req.user.id;
+  try {
+    const targetId = req.params.id;
+    const userId = req.user.id;
 
-  const user = await User.findById(userId);
-  const target = await User.findById(targetId);
+    if (targetId === userId) {
+      return res.status(400).json({
+        message: "You cannot follow yourself",
+      });
+    }
 
-  if (!target) return res.status(404).json({ message: "User not found" });
+    const user = await User.findById(userId);
+    const target = await User.findById(targetId);
 
-const isFollowing = user.following.includes(targetId);
+    if (!user || !target) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
 
+    const isFollowing = user.following.some(
+      (id) => id.toString() === targetId
+    );
 
+    if (isFollowing) {
+      user.following = user.following.filter(
+        (id) => id.toString() !== targetId
+      );
 
-if (!isFollowing) {
-  await Notification.create({
-    user: targetId,
-    type: "follow",
-    message: `${user.name} followed you`,
-  });
+      target.followers = target.followers.filter(
+        (id) => id.toString() !== userId
+      );
+    } else {
+      user.following.push(target._id);
+      target.followers.push(user._id);
 
-  const io = req.app.get("io");
-  io.to(targetId).emit("notification", {
-    type: "follow",
-    message: `${user.name} followed you`,
-  });
-}
+      await Notification.create({
+        user: targetId,
+        type: "follow",
+        message: `${user.name} followed you`,
+      });
 
+      const io = req.app.get("io");
 
-  await user.save();
+      if (io) {
+        io.to(targetId).emit("notification", {
+          type: "follow",
+          message: `${user.name} followed you`,
+        });
+      }
+    }
 
-  //  SOCKET NOTIFICATION
-  const io = req.app.get("io");
-  if (!isFollowing) {
-    io.to(targetId).emit("notification", {
-      type: "follow",
-      message: `${user.name} followed you`,
+    await user.save();
+    await target.save();
+
+    return res.json({
+      message: isFollowing
+        ? "Unfollowed"
+        : "Followed",
+      isFollowing: !isFollowing,
+    });
+  } catch (err) {
+    console.error("TOGGLE FOLLOW ERROR:", err);
+
+    return res.status(500).json({
+      message: "Unable to update follow status",
     });
   }
-
-res.json({
-  message: isFollowing ? "Unfollowed" : "Followed",
-  isFollowing,
-});
-
-
 };
 
 //  GET ALL TRAVELERS
@@ -302,7 +325,7 @@ export const getTravelers = async (req, res) => {
 
     res.json(users);
   } catch (err) {
-    console.error("GET TRAVELERS ERROR:", err); // 👈 IMPORTANT
+    console.error("GET TRAVELERS ERROR:", err); 
     res.status(500).json({ error: err.message });
   }
 };
